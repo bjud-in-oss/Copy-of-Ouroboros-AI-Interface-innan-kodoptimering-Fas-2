@@ -9,6 +9,7 @@ const CLIENT_ID = ENV_CLIENT_ID && ENV_CLIENT_ID.length > 5 ? ENV_CLIENT_ID : FA
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const FOLDER_NAME = 'Ouroboros';
+const ROOT_FOLDER_ID = '12meT6kaY3dOj6rIkTCbkoHipzS_-p45';
 const FILE_NAME = 'app-data.json';
 const BACKUP_FILE_NAME = 'app-data.backup.json';
 
@@ -87,7 +88,21 @@ export const authenticate = (): Promise<void> => {
  */
 export const ensureFolderExists = async (): Promise<string> => {
   try {
-    // 1. Search for existing folder
+    // 1. Try to get folder via hardcoded ID directly
+    try {
+      const directResponse = await window.gapi.client.drive.files.get({
+        fileId: ROOT_FOLDER_ID,
+        fields: 'id, trashed'
+      });
+      if (directResponse.result && !directResponse.result.trashed) {
+        console.log("Cortex anchored via ROOT_FOLDER_ID");
+        return ROOT_FOLDER_ID;
+      }
+    } catch (directErr) {
+      console.warn("Direct ID fetch failed, falling back to search...");
+    }
+
+    // 2. Search for existing folder
     const response = await window.gapi.client.drive.files.list({
       q: `mimeType = 'application/vnd.google-apps.folder' and name = '${FOLDER_NAME}' and trashed = false`,
       fields: 'files(id, name)',
@@ -99,7 +114,7 @@ export const ensureFolderExists = async (): Promise<string> => {
       return files[0].id;
     }
 
-    // 2. Create if not found
+    // 3. Create if not found
     const createResponse = await window.gapi.client.drive.files.create({
       resource: {
         name: FOLDER_NAME,
@@ -348,19 +363,34 @@ export const runDiagnostics = async (): Promise<string> => {
   const log = [];
   try {
     log.push("--- DIAGNOSTIC REPORT ---");
-    log.push("1. Checking for 'Ouroboros' Folder...");
-    const folderResp = await window.gapi.client.drive.files.list({
-      q: `mimeType = 'application/vnd.google-apps.folder' and name = '${FOLDER_NAME}' and trashed = false`,
-      fields: "files(id, name, parents)",
-      spaces: 'drive'
-    });
-    const folders = folderResp.result.files;
+    log.push(`1. Checking for Ouroboros Cortex via Hardcoded ID (${ROOT_FOLDER_ID})...`);
+    
     let folderId = "";
-    if (folders && folders.length > 0) {
-      folderId = folders[0].id;
-      log.push(`   FOUND: ${folders.length} folder(s). ID: ${folderId}`);
-    } else {
-      log.push("   NOT FOUND: No 'Ouroboros' folder found.");
+    try {
+        const directResp = await window.gapi.client.drive.files.get({
+            fileId: ROOT_FOLDER_ID,
+            fields: 'id, name, trashed'
+        });
+        if (directResp.result && !directResp.result.trashed) {
+            folderId = directResp.result.id;
+            log.push(`   FOUND: Cortex Anchored. ID: ${folderId}`);
+        } else {
+             log.push(`   TRASHED: Cortex folder is trashed.`);
+        }
+    } catch (err) {
+        log.push(`   NOT FOUND via Hardcoded ID. Falling back to name search...`);
+        const folderResp = await window.gapi.client.drive.files.list({
+          q: `mimeType = 'application/vnd.google-apps.folder' and name = '${FOLDER_NAME}' and trashed = false`,
+          fields: "files(id, name, parents)",
+          spaces: 'drive'
+        });
+        const folders = folderResp.result.files;
+        if (folders && folders.length > 0) {
+          folderId = folders[0].id;
+          log.push(`   FOUND via Search: ${folders.length} folder(s). ID: ${folderId}`);
+        } else {
+          log.push("   NOT FOUND: No 'Ouroboros' folder found.");
+        }
     }
 
     if (folderId) {
