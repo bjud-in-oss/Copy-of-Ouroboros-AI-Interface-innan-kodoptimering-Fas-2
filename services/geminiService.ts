@@ -8,7 +8,8 @@ const ai = new GoogleGenAI({ apiKey });
 // Define the interface for a parsed tool request
 type ToolRequest = 
   | { tool: 'createContextCapsule'; args: { title: string; content: string; targetProjectId: string; } }
-  | { tool: 'readContextCapsule'; args: { fileId: string; } };
+  | { tool: 'readContextCapsule'; args: { fileId: string; } }
+  | { tool: 'readGitHubCode'; args: { filePath: string; } };
 
 const memoryUpdateSchema: Schema = {
  type: Type.OBJECT,
@@ -144,6 +145,7 @@ export const processInteraction = async (
   Supported Tools:
  1. createContextCapsule: args: { title: string, content: string, targetProjectId: string }
  2. readContextCapsule: args: { fileId: string }
+ 3. readGitHubCode: args: { filePath: string }
 
 
  NEW ARCHITECTURE: SAFE CONTEXT CAPSULES
@@ -252,6 +254,21 @@ export const processInteraction = async (
                    const successMsg = `\n\n[SYSTEM: Tool 'readContextCapsule' executed successfully. Content:\n${content}\n]`;
                    finalResponseText += successMsg;
                    finalFocus.chain_of_thought.push(`Executed tool 'readContextCapsule' for file ID: ${toolRequest.args.fileId}`);
+               } else if (toolRequest.tool === 'readGitHubCode') {
+                   console.log(`Executing Tool: readGitHubCode (${toolRequest.args.filePath})`);
+                   const url = `https://raw.githubusercontent.com/bjud-in-oss/ouroboros-memory-interface/main/${toolRequest.args.filePath}`;
+                   const res = await fetch(url);
+                   if (!res.ok) throw new Error(`GitHub fetch failed: ${res.statusText}`);
+                   let content = await res.text();
+                   
+                   // Använd samma Truncation Shield som tidigare för säkerhets skull
+                   if (content.length > 15000) {
+                       content = content.substring(0, 15000) + "\n\n...[SYSTEM WARNING: FILE CONTENT TRUNCATED DUE TO COGNITIVE LIMITS.]";
+                   }
+                   
+                   const successMsg = `\n\n[SYSTEM: Tool 'readGitHubCode' executed successfully. File Content from GitHub:\n${content}\n]`;
+                   finalResponseText += successMsg;
+                   finalFocus.chain_of_thought.push(`Executed tool 'readGitHubCode' for file: ${toolRequest.args.filePath}`);
                }
            } catch (execErr: any) {
                console.error("Tool Execution Failed:", execErr);
