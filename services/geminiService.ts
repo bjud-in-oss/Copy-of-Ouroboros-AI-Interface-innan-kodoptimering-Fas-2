@@ -76,7 +76,7 @@ export const processInteraction = async (
      throw new Error("API Key is missing. Please ensure process.env.API_KEY is configured.");
  }
 
- const model = "gemini-3.1-flash-lite";
+ const model = "gemini-3-flash";
  const memoryState = JSON.parse(JSON.stringify(currentMemory));
 
  const systemInstruction = `
@@ -129,6 +129,8 @@ export const processInteraction = async (
 
  let finalResponseText = '';
  let finalFocus = currentFocus;
+
+ const executedToolCalls = new Set<string>();
 
  for (let turn = 0; turn <= 20; turn++) {
     if (turn === 20) {
@@ -233,8 +235,13 @@ export const processInteraction = async (
         
         for (const call of response.functionCalls) {
             let result: any;
-            try {
-                if (call.name === 'addLearnedTruth') {
+            const callSignature = JSON.stringify({ name: call.name, args: call.args });
+            if (executedToolCalls.has(callSignature)) {
+                result = { error: "SYSTEM STOP: You already executed this exact tool call with these exact arguments in this turn. Stop repeating yourself and provide the final JSON text_response to the user." };
+            } else {
+                executedToolCalls.add(callSignature);
+                try {
+                    if (call.name === 'addLearnedTruth') {
                     const args = call.args as any;
                     memoryState.learned_truths.push(args.truth);
                     result = { success: true, message: `Learned truth added.` };
@@ -312,6 +319,7 @@ export const processInteraction = async (
                 }
             } catch (err: any) {
                 result = { error: err.message || JSON.stringify(err) };
+            }
             }
             
             functionResponses.push({
