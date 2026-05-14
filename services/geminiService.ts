@@ -66,13 +66,36 @@ export const processInteraction = async (
  
  INPUT CONTEXT:
  --- LONG_TERM_MEMORY.json ---
- ${JSON.stringify(memoryState)}
+ CURRENT LEARNED TRUTHS: ${JSON.stringify(memoryState.learned_truths)}
+ Your deep memory (projects, graph nodes) is hidden to save cognitive load. If the user asks about a specific topic, the system will inject a [COGNITIVE WHISPER] with relevant file IDs. Use 'readContextCapsule' to fetch their full contents.
  --- CURRENT_FOCUS.md (State) ---
  ${JSON.stringify(currentFocus)}
  `;
 
+ // Whisper Engine (Auto-RAG)
+ const lowerUserPrompt = userPrompt.toLowerCase();
+ const matchedItems: any[] = [];
+
+ memoryState.active_projects.forEach((proj: any) => {
+    if (proj.name && lowerUserPrompt.includes(proj.name.toLowerCase())) {
+        matchedItems.push(proj);
+    }
+ });
+
+ memoryState.knowledge_graph.nodes.forEach((node: any) => {
+    if (node.label && lowerUserPrompt.includes(node.label.toLowerCase())) {
+        matchedItems.push(node);
+    }
+ });
+
+ let finalUserPrompt = userPrompt;
+ if (matchedItems.length > 0) {
+    const whisper = `\n\n[COGNITIVE WHISPER: System detected relevant memories. Project/Node matches: ${matchedItems.map(i => i.name || i.label).join(', ')}. Associated File IDs: ${matchedItems.map(i => i.detailed_spec_file_id || i.id).join(', ')}. Use 'readContextCapsule' if you need the full context.]`;
+    finalUserPrompt += whisper;
+ }
+
  let history: Content[] = [
-    { role: 'user', parts: [{ text: userPrompt }] }
+    { role: 'user', parts: [{ text: finalUserPrompt }] }
  ];
 
  let finalResponseText = '';
