@@ -155,7 +155,27 @@ const App: React.FC = () => {
       const fullPrompt = systemInjection ? `${input}\n\n${systemInjection}` : input;
       if (systemInjection) setSystemInjection(null); // Clear after injection
       
-      const { response, newMemory, newFocus } = await processInteraction(fullPrompt, memory, focus);
+      const { response, newMemory, newFocus } = await processInteraction(
+        fullPrompt, 
+        memory, 
+        focus,
+        async (updatedMemory) => {
+          setMemory(updatedMemory);
+          // Omedelbar Drive Sync vid atomic mutation
+          if (isDriveConnected) {
+             try {
+                await driveService.saveState({
+                  app_version: "1.0.0",
+                  last_sync_timestamp: Date.now(),
+                  memory: updatedMemory,
+                  focus: focus
+                });
+             } catch (err) {
+                console.error("Real-time Drive Sync failed:", err);
+             }
+          }
+        }
+      );
       
       setMemory(newMemory);
       setFocus(newFocus);

@@ -9,7 +9,11 @@ const CLIENT_ID = ENV_CLIENT_ID && ENV_CLIENT_ID.length > 5 ? ENV_CLIENT_ID : FA
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const FOLDER_NAME = 'Ouroboros';
-const ROOT_FOLDER_ID = '1XjE0j1L0KGL8HghbxHHpzHlB8CL1uzND';
+let ROOT_FOLDER_ID = '1XjE0j1L0KGL8HghbxHHpzHlB8CL1uzND';
+
+export const setRootFolderId = (id: string) => {
+    ROOT_FOLDER_ID = id;
+};
 const FILE_NAME = 'app-data.json';
 const BACKUP_FILE_NAME = 'app-data.backup.json';
 

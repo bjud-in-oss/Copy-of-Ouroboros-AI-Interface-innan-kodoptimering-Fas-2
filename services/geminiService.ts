@@ -37,7 +37,8 @@ const focusUpdateSchema: Schema = {
 export const processInteraction = async (
  userPrompt: string,
  currentMemory: LongTermMemory,
- currentFocus: FocusLog
+ currentFocus: FocusLog,
+ onMemoryMutation?: (newMemory: LongTermMemory) => Promise<void>
 ): Promise<{
    response: string;
    newMemory: LongTermMemory;
@@ -226,12 +227,9 @@ export const processInteraction = async (
         
         if (memoryMutated) {
             try {
-                await saveState({
-                    app_version: "1.0.0",
-                    last_sync_timestamp: Date.now(),
-                    memory: memoryState,
-                    focus: currentFocus
-                });
+                if (onMemoryMutation) {
+                    await onMemoryMutation(memoryState);
+                }
             } catch (err: any) {
                 console.error("Atomic save failed after tool execution", err);
             }
