@@ -86,6 +86,7 @@ export const processInteraction = async (
  You have no internal persistent state between sessions. Your entire "Self" is defined by your Long Term Memory and Current Focus.
  
  YOUR TASK:
+ NOTE: You can and should output MULTIPLE tool calls in a single response if you need to perform multiple actions (e.g., adding several learned truths at once). This saves reflection turns.
  1. Analyze the User's Input.
  2. Use the provided tools to mutate your Memory or read files as needed. 
     - Use memory mutation tools (addLearnedTruth, addGraphNode, etc.) to atomicly update LONG_TERM_MEMORY.
@@ -129,10 +130,10 @@ export const processInteraction = async (
  let finalResponseText = '';
  let finalFocus = currentFocus;
 
- for (let turn = 0; turn <= 10; turn++) {
-    if (turn === 10) {
+ for (let turn = 0; turn <= 20; turn++) {
+    if (turn === 20) {
         return {
-            response: "[SYSTEM WARNING: Max reflexions-loop nådd (10 steg). Avbryter för att förhindra hängning.]",
+            response: "[SYSTEM WARNING: Max reflexions-loop nådd (20 steg). Avbryter för att förhindra hängning.]",
             newMemory: memoryState,
             newFocus: currentFocus
         };
@@ -143,8 +144,8 @@ export const processInteraction = async (
     try {
         const timeoutPromise = new Promise((_, reject) => {
              timeoutId = setTimeout(() => {
-                 reject(new Error("System Timeout: Gemini API tog för lång tid på sig att svara (>25 sekunder). Vänligen försök igen."));
-             }, 25000);
+                 reject(new Error("System Timeout: Gemini API tog för lång tid på sig att svara (>60 sekunder). Vänligen försök igen."));
+             }, 60000);
         });
 
         const apiCall = ai.models.generateContent({
@@ -336,9 +337,14 @@ export const processInteraction = async (
         history.push({ role: 'model', parts: [{ text: response.text || '' }] });
         
         if (response.text) {
-             const parsed = JSON.parse(response.text);
-             finalResponseText = parsed.text_response || "System error: No response generated.";
-             finalFocus = parsed.updated_focus || currentFocus;
+             try {
+                 const parsed = JSON.parse(response.text);
+                 finalResponseText = parsed.text_response || "System error: No response generated.";
+                 finalFocus = parsed.updated_focus || currentFocus;
+             } catch (e) {
+                 finalResponseText = "System Error: Modellen returnerade ogiltig JSON. Råtext: " + response.text;
+                 finalFocus = currentFocus;
+             }
         }
         break; // End of interaction
     }
