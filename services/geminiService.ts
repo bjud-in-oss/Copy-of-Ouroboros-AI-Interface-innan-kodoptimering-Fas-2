@@ -134,7 +134,11 @@ export const processInteraction = async (
     });
 
     if (response.functionCalls && response.functionCalls.length > 0) {
-        history.push({ role: 'model', parts: response.functionCalls.map(c => ({ functionCall: c })) });
+        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+            history.push(response.candidates[0].content);
+        } else {
+            history.push({ role: 'model', parts: response.functionCalls.map(c => ({ functionCall: c })) });
+        }
         
         const functionResponses = [];
         let memoryMutated = false;
