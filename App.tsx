@@ -16,6 +16,7 @@ const App: React.FC = () => {
   // --- DEBUG BRIDGE END ---
 
   // --- State ---
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-flash-latest');
   const [memory, setMemory] = useState<LongTermMemory>(INITIAL_MEMORY);
   const [focus, setFocus] = useState<FocusLog>(INITIAL_FOCUS);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -79,7 +80,8 @@ const App: React.FC = () => {
                        console.error("Real-time Drive Sync failed:", err);
                     }
                  }
-               }
+               },
+               selectedModel
              );
              setMemory(newMemory);
              setFocus(newFocus);
@@ -233,7 +235,8 @@ const App: React.FC = () => {
                 console.error("Real-time Drive Sync failed:", err);
              }
           }
-        }
+        },
+        selectedModel
       );
       
       setMemory(newMemory);
@@ -373,9 +376,28 @@ const App: React.FC = () => {
                     <Send size={16} />
                 </button>
             </div>
-            <div className="text-[10px] text-zinc-600 mt-2 text-center flex items-center justify-center gap-1">
-                {isSyncing ? <Cloud size={10} className="animate-pulse text-indigo-400" /> : <HardDrive size={10} />}
-                <span>{isSyncing ? "Syncing with Drive..." : "Drive-Augmented Memory Access"}</span>
+            <div className="text-[10px] text-zinc-600 mt-2 text-center flex items-center justify-center gap-2">
+                <div className="flex items-center gap-1">
+                    {isSyncing ? <Cloud size={10} className="animate-pulse text-indigo-400" /> : <HardDrive size={10} />}
+                    <span>{isSyncing ? "Syncing with Drive..." : "Drive-Augmented Memory Access"}</span>
+                </div>
+                <span className="text-zinc-700">|</span>
+                <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-indigo-500"
+                >
+                    <option value="gemini-pro-latest">gemini-pro-latest</option>
+                    <option value="gemini-flash-latest">gemini-flash-latest</option>
+                    <option value="gemini-flash-lite-latest">gemini-flash-lite-latest</option>
+                    <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+                    <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+                    <option value="gemini-robotics-er-1.6-preview">gemini-robotics-er-1.6-preview</option>
+                    <option value="gemma-4-31b-it">gemma-4-31b-it</option>
+                    <option value="gemma-4-26b-a4b-it">gemma-4-26b-a4b-it</option>
+                </select>
             </div>
         </div>
       </div>

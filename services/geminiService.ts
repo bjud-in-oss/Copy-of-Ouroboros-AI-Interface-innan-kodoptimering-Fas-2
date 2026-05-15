@@ -38,7 +38,8 @@ export const processInteraction = async (
  userPrompt: string,
  currentMemory: LongTermMemory,
  currentFocus: FocusLog,
- onMemoryMutation?: (newMemory: LongTermMemory) => Promise<void>
+ onMemoryMutation?: (newMemory: LongTermMemory) => Promise<void>,
+ modelName: string = "gemini-flash-latest"
 ): Promise<{
    response: string;
    newMemory: LongTermMemory;
@@ -48,7 +49,7 @@ export const processInteraction = async (
      throw new Error("API Key is missing. Please ensure process.env.API_KEY is configured.");
  }
 
- const model = "gemini-3-flash-preview";
+ const model = modelName;
  const memoryState = JSON.parse(JSON.stringify(currentMemory));
 
  const systemInstruction = `
