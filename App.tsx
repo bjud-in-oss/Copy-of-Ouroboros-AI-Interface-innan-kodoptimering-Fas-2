@@ -3,9 +3,10 @@ import { INITIAL_MEMORY, INITIAL_FOCUS } from './constants';
 import { LongTermMemory, FocusLog, ChatMessage, AppData } from './types';
 import { processInteraction } from './services/geminiService';
 import * as driveService from './services/driveService';
+import { mcpService } from './services/mcpService';
 import MemoryPanel from './components/MemoryPanel';
 import FocusPanel from './components/FocusPanel';
-import { Terminal, Trash2, Send, Cpu, HardDrive, Download, Cloud, LogIn, Bug, Wrench } from 'lucide-react';
+import { Terminal, Trash2, Send, Cpu, HardDrive, Download, Cloud, LogIn, Bug, Wrench, Plug } from 'lucide-react';
 
 const App: React.FC = () => {
   // --- DEBUG BRIDGE START ---
@@ -17,6 +18,8 @@ const App: React.FC = () => {
 
   // --- State ---
   const [selectedModel, setSelectedModel] = useState<string>('gemini-flash-latest');
+  const [mcpUrl, setMcpUrl] = useState<string>('http://localhost:3001/sse');
+  const [mcpStatus, setMcpStatus] = useState<'Disconnected' | 'Connecting' | 'Connected'>('Disconnected');
   const [memory, setMemory] = useState<LongTermMemory>(INITIAL_MEMORY);
   const [focus, setFocus] = useState<FocusLog>(INITIAL_FOCUS);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -274,6 +277,24 @@ const App: React.FC = () => {
       
   };
 
+  const handleConnectMCP = async () => {
+      if (mcpStatus === 'Connected') {
+          await mcpService.disconnect();
+          setMcpStatus('Disconnected');
+          return;
+      }
+
+      setMcpStatus('Connecting');
+      try {
+          await mcpService.connect(mcpUrl);
+          setMcpStatus('Connected');
+      } catch (err: any) {
+          console.error("MCP connection failed:", err);
+          setMcpStatus('Disconnected');
+          setMessages(prev => [...prev, { role: 'system', content: `MCP Connection Failed: ${err.message || String(err)}`, timestamp: Date.now() }]);
+      }
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#09090b] text-zinc-300 font-sans overflow-hidden">
       
@@ -398,6 +419,31 @@ const App: React.FC = () => {
                     <option value="gemma-4-31b-it">gemma-4-31b-it</option>
                     <option value="gemma-4-26b-a4b-it">gemma-4-26b-a4b-it</option>
                 </select>
+                <span className="text-zinc-700">|</span>
+                <div className="flex items-center gap-1">
+                    <input 
+                        type="text" 
+                        value={mcpUrl} 
+                        onChange={(e) => setMcpUrl(e.target.value)}
+                        placeholder="MCP URL"
+                        className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-1.5 py-0.5 w-32 focus:outline-none focus:border-emerald-500 text-[10px]"
+                    />
+                    <button 
+                        onClick={handleConnectMCP}
+                        disabled={mcpStatus === 'Connecting'}
+                        className={`px-2 py-0.5 rounded flex items-center gap-1 transition-colors border ${
+                           mcpStatus === 'Connected' 
+                           ? 'bg-emerald-900/40 text-emerald-400 border-emerald-800 hover:bg-emerald-900/60' 
+                           : mcpStatus === 'Connecting'
+                           ? 'bg-amber-900/40 text-amber-400 border-amber-800'
+                           : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
+                        }`}
+                    >
+                        <Plug size={10} />
+                        {mcpStatus === 'Connected' ? 'Disconnect MCP' : mcpStatus === 'Connecting' ? 'Connecting...' : 'Connect MCP'}
+                    </button>
+                    {mcpStatus === 'Connected' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-1"></span>}
+                </div>
             </div>
         </div>
       </div>
