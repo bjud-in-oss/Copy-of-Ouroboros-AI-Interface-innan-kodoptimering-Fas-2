@@ -1,0 +1,15 @@
+{
+  "name": "mcp-bridge",
+  "version": "1.0.0",
+  "description": "MCP Bridge for stdio to SSE",
+  "main": "bridge.js",
+  "type": "module",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
