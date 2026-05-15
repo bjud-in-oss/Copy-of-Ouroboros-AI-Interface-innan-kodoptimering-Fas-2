@@ -252,7 +252,12 @@ export const processInteraction = async (
                     throw new Error(`Unknown tool: ${call.name}`);
                 }
             } catch (err: any) {
-                result = { error: err.message || JSON.stringify(err) };
+                result = {
+                    status: "error",
+                    errorType: err.name || "EXECUTION_ERROR",
+                    message: err.message || String(err),
+                    stateSnapshot: { tool: call.name, args: call.args }
+                };
             }
             
             functionResponses.push({
